@@ -1,3 +1,4 @@
+import os
 import requests
 from datetime import date, datetime, timedelta
 import pause
@@ -15,7 +16,7 @@ class WeatherWorker(object):
 
         # You can generate an API token from the "API Tokens Tab" in the UI
         self.influx_address = config['influx']['address']
-        self.token = config['influx']['token']
+        self.token = os.environ['INFLUXDB_ADMIN_USER_TOKEN']
         self.org = config['influx']['org']
         self.bucket = config['influx']['bucket']
 
@@ -23,7 +24,10 @@ class WeatherWorker(object):
         self.ts = timedelta(seconds=config['weather']['ts'])
         self.wurl = config['weather']['url']
         self.req_params = config['weather']['req_params']
+        self.req_params['appid'] = os.environ['OPENWEATHERMAP_TOKEN']
         self.fields_to_track: list[str] = config['weather']['fields_to_track']
+
+        self.kill = False
 
     def get_weather(self):
         response = requests.get(self.wurl, params=self.req_params).json()
@@ -43,7 +47,7 @@ class WeatherWorker(object):
         next_wakeup = datetime.now()
         with InfluxDBClient(url=self.influx_address, token=self.token, org=self.org) as client:
             write_api = client.write_api(write_options=SYNCHRONOUS)
-            while(True):
+            while(not self.kill):
                 timestamp, response = self.get_weather()
                 if response is None:
                     next_wakeup += self.ts
@@ -56,6 +60,7 @@ class WeatherWorker(object):
                 write_api.write(self.bucket, self.org, data)
                 next_wakeup += self.ts
                 pause.until(next_wakeup)
+                self.kill = True
 
         
 
@@ -74,10 +79,10 @@ if __name__ == "__main__":
         with open(args.config, "r") as read_content:
             conf = json.load(read_content)
         worker = WeatherWorker(conf)
-        worker.run_forever()
+        # worker.run_forever()
     else:
         raise argparse.ArgumentError(path_parser, f"Config file doesn't exist! Invalid path: {args.config} to config.ini.txt file, please check it!")
 
-    
+    print('Done')
 
 
