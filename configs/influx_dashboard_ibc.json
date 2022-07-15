@@ -1,0 +1,250 @@
+{
+ "meta": {
+  "version": "1",
+  "type": "dashboard",
+  "name": "IBC-Template",
+  "description": "template created from dashboard: IBC"
+ },
+ "content": {
+  "data": {
+   "type": "dashboard",
+   "attributes": {
+    "name": "IBC",
+    "description": ""
+   },
+   "relationships": {
+    "label": {
+     "data": []
+    },
+    "cell": {
+     "data": [
+      {
+       "type": "cell",
+       "id": "09acb0f63ca3a000"
+      },
+      {
+       "type": "cell",
+       "id": "09acb14873a3a000"
+      }
+     ]
+    },
+    "variable": {
+     "data": []
+    }
+   }
+  },
+  "included": [
+   {
+    "id": "09acb0f63ca3a000",
+    "type": "cell",
+    "attributes": {
+     "x": 0,
+     "y": 0,
+     "w": 6,
+     "h": 4
+    },
+    "relationships": {
+     "view": {
+      "data": {
+       "type": "view",
+       "id": "09acb0f63ca3a000"
+      }
+     }
+    }
+   },
+   {
+    "id": "09acb14873a3a000",
+    "type": "cell",
+    "attributes": {
+     "x": 6,
+     "y": 0,
+     "w": 3,
+     "h": 4
+    },
+    "relationships": {
+     "view": {
+      "data": {
+       "type": "view",
+       "id": "09acb14873a3a000"
+      }
+     }
+    }
+   },
+   {
+    "type": "view",
+    "id": "09acb0f63ca3a000",
+    "attributes": {
+     "name": "Power Output",
+     "properties": {
+      "shape": "chronograf-v2",
+      "queries": [
+       {
+        "text": "from(bucket: \"primary\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"ibc\")\n  |> filter(fn: (r) => r[\"_field\"] == \"power\")\n  |> aggregateWindow(every: 30m, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+        "editMode": "advanced",
+        "name": "",
+        "builderConfig": {
+         "buckets": [],
+         "tags": [
+          {
+           "key": "_measurement",
+           "values": [],
+           "aggregateFunctionType": "filter"
+          }
+         ],
+         "functions": [
+          {
+           "name": "mean"
+          }
+         ],
+         "aggregateWindow": {
+          "period": "auto",
+          "fillValues": false
+         }
+        }
+       }
+      ],
+      "axes": {
+       "x": {
+        "bounds": [
+         "",
+         ""
+        ],
+        "label": "",
+        "prefix": "",
+        "suffix": "",
+        "base": "10",
+        "scale": "linear"
+       },
+       "y": {
+        "bounds": [
+         "",
+         ""
+        ],
+        "label": "",
+        "prefix": "",
+        "suffix": "",
+        "base": "10",
+        "scale": "linear"
+       }
+      },
+      "type": "xy",
+      "staticLegend": {
+       "colorizeRows": true,
+       "opacity": 1,
+       "orientationThreshold": 100000000,
+       "widthRatio": 1
+      },
+      "geom": "monotoneX",
+      "colors": [
+       {
+        "id": "12a0d415-f1fc-415e-831b-19fddd2b3f6a",
+        "type": "scale",
+        "hex": "#31C0F6",
+        "name": "Nineteen Eighty Four",
+        "value": 0
+       },
+       {
+        "id": "17c25116-b1b7-42e7-bcc5-23ccfdd1e5a1",
+        "type": "scale",
+        "hex": "#A500A5",
+        "name": "Nineteen Eighty Four",
+        "value": 0
+       },
+       {
+        "id": "bd2dab94-7fb5-41e5-a92f-d2c8213b9695",
+        "type": "scale",
+        "hex": "#FF7E27",
+        "name": "Nineteen Eighty Four",
+        "value": 0
+       }
+      ],
+      "note": "",
+      "showNoteWhenEmpty": false,
+      "xColumn": "_time",
+      "generateXAxisTicks": [],
+      "xTotalTicks": 0,
+      "xTickStart": 0,
+      "xTickStep": 0,
+      "yColumn": "_value",
+      "generateYAxisTicks": [],
+      "yTotalTicks": 0,
+      "yTickStart": 0,
+      "yTickStep": 0,
+      "shadeBelow": true,
+      "position": "overlaid",
+      "timeFormat": "",
+      "hoverDimension": "auto",
+      "legendColorizeRows": true,
+      "legendHide": false,
+      "legendOpacity": 1,
+      "legendOrientationThreshold": 100000000
+     }
+    }
+   },
+   {
+    "type": "view",
+    "id": "09acb14873a3a000",
+    "attributes": {
+     "name": "Current Power Output",
+     "properties": {
+      "shape": "chronograf-v2",
+      "type": "gauge",
+      "queries": [
+       {
+        "text": "from(bucket: \"primary\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"ibc\")\n  |> filter(fn: (r) => r[\"_field\"] == \"power\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+        "editMode": "advanced",
+        "name": "",
+        "builderConfig": {
+         "buckets": [],
+         "tags": [
+          {
+           "key": "_measurement",
+           "values": [],
+           "aggregateFunctionType": "filter"
+          }
+         ],
+         "functions": [
+          {
+           "name": "mean"
+          }
+         ],
+         "aggregateWindow": {
+          "period": "auto",
+          "fillValues": false
+         }
+        }
+       }
+      ],
+      "prefix": "",
+      "tickPrefix": "",
+      "suffix": "",
+      "tickSuffix": "",
+      "colors": [
+       {
+        "id": "0",
+        "type": "min",
+        "hex": "#00C9FF",
+        "name": "laser",
+        "value": 0
+       },
+       {
+        "id": "1",
+        "type": "max",
+        "hex": "#9394FF",
+        "name": "comet",
+        "value": 16
+       }
+      ],
+      "decimalPlaces": {
+       "isEnforced": true,
+       "digits": 2
+      },
+      "note": "",
+      "showNoteWhenEmpty": false
+     }
+    }
+   }
+  ]
+ },
+ "labels": []
+}
