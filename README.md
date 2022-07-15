@@ -19,3 +19,12 @@ Access the GUI on `http://localhost:8086/` when influx container is running.
 ```
 admin: bitnami123
 ```
+
+## Influx Address
+If you are running the scraper outside of the Docker-compose, you have to take care of the IP adresses of the InfluxDB in the `configs/config.json` under the entry `influx.address`. E.g., on the localhost, put there 
+```json
+...
+"address": "http://127.0.0.1:8086",
+...
+```
+whereas when inside docker-compose networking, there will be address of `"address": "http://influx-container-name:8086"`.

@@ -1,10 +1,10 @@
 {
     "influx":{
-        "address": "127.0.0.1:8086",
+        "address": "http://influxdb:8086",
         "org": "primary",
         "bucket": "primary"
     },
-    "weather":{
+    "openweathermap":{
         "place": "Vestec",
         "ts": 600,
         "url": "https://api.openweathermap.org/data/3.0/onecall",
@@ -22,5 +22,29 @@
             "wind_speed",
             "snow"
         ]
+    },
+    "weatherapi":{
+        "place": "Vestec",
+        "ts": 600,
+        "url": "http://api.weatherapi.com/v1/current.json",
+        "req_params":{
+            "q": "49.9809747445461,14.499782015888211"
+        },
+        "fields_to_track": [
+            "temp",
+            "pressure",
+            "humidity",
+            "clouds",
+            "visibility",
+            "wind_speed",
+            "snow"
+        ]
+    },
+    "ibc":{
+        "url": "http://ws.meteocontrol.de/api/sites/STI1G/data/energygeneration",
+        "req_params":{
+            "type": "day",
+            "date": ""
+        }
     }
 }

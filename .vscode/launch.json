@@ -19,6 +19,7 @@
             "program": "weather_scraper/main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
+            "envFile": "${workspaceFolder}/secrets/.env",
             "args": [
                 "-c", "configs/config.json"
             ]

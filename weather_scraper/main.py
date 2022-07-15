@@ -1,10 +1,11 @@
 import os
 import requests
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 import pause
 
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
+from rx import catch
 
 
 class WeatherWorker(object):
@@ -20,27 +21,51 @@ class WeatherWorker(object):
         self.org = config['influx']['org']
         self.bucket = config['influx']['bucket']
 
-        self.place = config['weather']['place']
-        self.ts = timedelta(seconds=config['weather']['ts'])
-        self.wurl = config['weather']['url']
-        self.req_params = config['weather']['req_params']
-        self.req_params['appid'] = os.environ['OPENWEATHERMAP_TOKEN']
-        self.fields_to_track: list[str] = config['weather']['fields_to_track']
+        self.place = config['openweathermap']['place']
+        self.ts = timedelta(seconds=config['openweathermap']['ts'])
+        self.openweather_url = config['openweathermap']['url']
+        self.openweather_req_params = config['openweathermap']['req_params']
+        self.openweather_req_params['appid'] = os.environ['OPENWEATHERMAP_TOKEN']
+        self.fields_to_track: list[str] = config['openweathermap']['fields_to_track']
+
+        self.weatherapi_url = config['weatherapi']['url']
+        self.weatherapi_req_params = config['weatherapi']['req_params']
+        self.weatherapi_req_params['key'] = os.environ['WEATHERAPI_TOKEN']
+
+        self.ibc_url = config['ibc']['url']
+        self.ibc_req_params = config['ibc']['req_params']
+        self.ibc_req_params['apiKey'] = os.environ['IBC_TOKEN']
 
         self.kill = False
 
-    def get_weather(self):
-        response = requests.get(self.wurl, params=self.req_params).json()
+    def get_openweathermap(self):
+        response = requests.get(self.openweather_url, params=self.openweather_req_params).json()
         if response['cod'] != 401:
             selection = {
                 k:v
                 for k, v in response['current'].items() if k in self.fields_to_track
             }
-            return response['current']['dt'], selection
+            # return response['current']['dt'], selection
+            now = round(1e9*datetime.now(timezone.utc).timestamp())  # in nanoseconds
+            return now, selection
         else:
             print(f'Request failed:\n{response}')
             return None, None
 
+    def get_weatherapi(self):
+        response = requests.get(self.weatherapi_url, params=self.weatherapi_req_params).json()
+
+    def get_ibc(self):
+        today = datetime.today()
+        self.ibc_req_params['date'] = datetime.strftime(today, '%y-%m-%d')
+        response = requests.get(self.ibc_url, params=self.ibc_req_params).json()
+        # hours_profile = [today+timedelta(hours=1) for _ in range(24)]
+        # cleaned = map(lambda x: response['data']]
+        unwrapped = {
+            round(1e6*pair[0]): pair[1]
+            for pair in response['chartData']['data'] if pair[1] is not None
+        }
+        return unwrapped
 
     
     def run_forever(self):
@@ -48,20 +73,32 @@ class WeatherWorker(object):
         with InfluxDBClient(url=self.influx_address, token=self.token, org=self.org) as client:
             write_api = client.write_api(write_options=SYNCHRONOUS)
             while(not self.kill):
-                timestamp, response = self.get_weather()
-                if response is None:
-                    write_api.write(self.bucket, self.org, f"mem,place=Failedpl kar=0 timestamp={datetime.utcnow()}")
-                    next_wakeup += self.ts
-                    pause.until(next_wakeup)
-                    continue
-                data = [
-                    f"mem,place={self.place} {k}={v} timestamp={timestamp}"
-                    for k, v in response
-                ]
-                write_api.write(self.bucket, self.org, data)
+                try:
+                    now = round(1e9*datetime.now(timezone.utc).timestamp())
+                    response_ibc = self.get_ibc()
+                    [
+                        write_api.write(self.bucket, self.org,f"ibc power={v} {k}")
+                        for k, v in response_ibc.items()
+                    ]
+                    # write_api.write(self.bucket, self.org, data_ibc)
+
+                    timestamp, response = self.get_openweathermap()
+                    if response is None:
+                        write_api.write(self.bucket, self.org, f"mem,place=Failedpl kar=0 {now}")
+                        next_wakeup += self.ts
+                        pause.until(next_wakeup)
+                        continue
+                    data = [
+                        f"mem,place={self.place} {k}={v} {timestamp}"
+                        for k, v in response
+                    ]
+                    write_api.write(self.bucket, self.org, data)
+                except Exception as exc:
+                    print(exc)
+                    print('Will try again in the next iteration...')
                 next_wakeup += self.ts
                 pause.until(next_wakeup)
-                self.kill = True
+                # self.kill = True
 
         
 
