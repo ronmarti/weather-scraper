@@ -1,0 +1,26 @@
+{
+    "influx":{
+        "address": "127.0.0.1:8086",
+        "org": "primary",
+        "bucket": "primary"
+    },
+    "weather":{
+        "place": "Vestec",
+        "ts": 600,
+        "url": "https://api.openweathermap.org/data/3.0/onecall",
+        "req_params":{
+            "lat": 49.9809747445461,
+            "lon": 14.499782015888211,
+            "units": "metric"
+        },
+        "fields_to_track": [
+            "temp",
+            "pressure",
+            "humidity",
+            "clouds",
+            "visibility",
+            "wind_speed",
+            "snow"
+        ]
+    }
+}
