@@ -55,12 +55,11 @@ class WeatherWorker(object):
     def get_weatherapi(self):
         response = requests.get(self.weatherapi_url, params=self.weatherapi_req_params).json()
 
-    def get_ibc(self):
-        today = datetime.today()
-        self.ibc_req_params['date'] = datetime.strftime(today, '%y-%m-%d')
+    def get_ibc(self, date: datetime = None):
+        if date is None:
+            date = datetime.today()
+        self.ibc_req_params['date'] = datetime.strftime(date, '%y-%m-%d')
         response = requests.get(self.ibc_url, params=self.ibc_req_params).json()
-        # hours_profile = [today+timedelta(hours=1) for _ in range(24)]
-        # cleaned = map(lambda x: response['data']]
         unwrapped = {
             round(1e6*pair[0]): pair[1]
             for pair in response['chartData']['data'] if pair[1] is not None
