@@ -1,5 +1,14 @@
 version: '2'
 services:
+  weather-scraper:
+    container_name: weather-scraper
+    build: ""
+    networks:
+      - home-network
+    image: weatherscraper
+    env_file:
+      - secrets/.env
+
   influxdb:
     image: docker.io/bitnami/influxdb:2
     ports:
