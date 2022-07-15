@@ -19,6 +19,8 @@ services:
       - secrets/.env
     volumes:
       - influxdb_data:/bitnami/influxdb
+    networks:
+      - home-network
 
 volumes:
   influxdb_data:

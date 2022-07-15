@@ -50,6 +50,7 @@ class WeatherWorker(object):
             while(not self.kill):
                 timestamp, response = self.get_weather()
                 if response is None:
+                    write_api.write(self.bucket, self.org, f"mem,place=Failedpl kar=0 timestamp={datetime.utcnow()}")
                     next_wakeup += self.ts
                     pause.until(next_wakeup)
                     continue
@@ -79,7 +80,7 @@ if __name__ == "__main__":
         with open(args.config, "r") as read_content:
             conf = json.load(read_content)
         worker = WeatherWorker(conf)
-        # worker.run_forever()
+        worker.run_forever()
     else:
         raise argparse.ArgumentError(path_parser, f"Config file doesn't exist! Invalid path: {args.config} to config.ini.txt file, please check it!")
 
