@@ -8,6 +8,7 @@ services:
     image: weatherscraper
     env_file:
       - secrets/.env
+    restart: always
 
   influxdb:
     container_name: influxdb
@@ -19,6 +20,7 @@ services:
       - secrets/.env
     volumes:
       - influxdb_data:/bitnami/influxdb
+    restart: always
     networks:
       - home-network
 

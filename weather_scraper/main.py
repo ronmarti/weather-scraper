@@ -21,16 +21,17 @@ class WeatherWorker(object):
         self.org = config['influx']['org']
         self.bucket = config['influx']['bucket']
 
-        self.place = config['openweathermap']['place']
-        self.ts = timedelta(seconds=config['openweathermap']['ts'])
-        self.openweather_url = config['openweathermap']['url']
-        self.openweather_req_params = config['openweathermap']['req_params']
-        self.openweather_req_params['appid'] = os.environ['OPENWEATHERMAP_TOKEN']
-        self.fields_to_track: list[str] = config['openweathermap']['fields_to_track']
+        # self.place = config['openweathermap']['place']
+        # self.openweather_url = config['openweathermap']['url']
+        # self.openweather_req_params = config['openweathermap']['req_params']
+        # self.openweather_req_params['appid'] = os.environ['OPENWEATHERMAP_TOKEN']
+        # self.fields_to_track: list[str] = config['openweathermap']['fields_to_track']
 
+        self.ts = timedelta(seconds=config['weatherapi']['ts'])
         self.weatherapi_url = config['weatherapi']['url']
-        self.weatherapi_req_params = config['weatherapi']['req_params']
-        self.weatherapi_req_params['key'] = os.environ['WEATHERAPI_TOKEN']
+        self.weatherapi_locations = config['weatherapi']['locations']
+        self.weatherapi_token = os.environ['WEATHERAPI_TOKEN']
+        self.weatherapi_fields_to_track: list[str] = config['weatherapi']['fields_to_track']
 
         self.ibc_url = config['ibc']['url']
         self.ibc_req_params = config['ibc']['req_params']
@@ -38,22 +39,38 @@ class WeatherWorker(object):
 
         self.kill = False
 
-    def get_openweathermap(self):
-        response = requests.get(self.openweather_url, params=self.openweather_req_params).json()
-        if response['cod'] != 401:
-            selection = {
-                k:v
-                for k, v in response['current'].items() if k in self.fields_to_track
-            }
-            # return response['current']['dt'], selection
-            now = round(1e9*datetime.now(timezone.utc).timestamp())  # in nanoseconds
-            return now, selection
+    # def get_openweathermap(self):
+    #     response = requests.get(self.openweather_url, params=self.openweather_req_params).json()
+    #     if response['cod'] != 401:
+    #         selection = {
+    #             k:v
+    #             for k, v in response['current'].items() if k in self.fields_to_track
+    #         }
+    #         # return response['current']['dt'], selection
+    #         now = round(1e9*datetime.now(timezone.utc).timestamp())  # in nanoseconds
+    #         return now, selection
+    #     else:
+    #         print(f'Request failed:\n{response}')
+    #         return None, None
+
+    def get_weatherapi(self, q: str):
+        """Calls weatherapi to get the current weather.
+
+        Args:
+            q (str): The `lat,long` string, e.g., `"49.9809747445461,14.499782015888211"`.
+
+        Returns:
+            utc_timestamp_nanoseconds, dict: timestamp and the dictionary of the resulting weather values.
+        """        
+        req_params = {'key': self.weatherapi_token,
+                      'q': q}
+        response = requests.get(self.weatherapi_url, params=req_params).json()
+        if 'current' in response:
+            timestamp = round(1e9*response['current']['last_updated_epoch'])
+            return timestamp, response['current']
         else:
             print(f'Request failed:\n{response}')
             return None, None
-
-    def get_weatherapi(self):
-        response = requests.get(self.weatherapi_url, params=self.weatherapi_req_params).json()
 
     def get_ibc(self, date: datetime = None):
         if date is None:
@@ -66,7 +83,7 @@ class WeatherWorker(object):
         }
         return unwrapped
 
-    
+
     def run_forever(self):
         next_wakeup = datetime.now()
         with InfluxDBClient(url=self.influx_address, token=self.token, org=self.org) as client:
@@ -79,27 +96,27 @@ class WeatherWorker(object):
                         write_api.write(self.bucket, self.org,f"ibc power={v} {k}")
                         for k, v in response_ibc.items()
                     ]
-                    # write_api.write(self.bucket, self.org, data_ibc)
 
-                    timestamp, response = self.get_openweathermap()
-                    if response is None:
-                        write_api.write(self.bucket, self.org, f"mem,place=Failedpl kar=0 {now}")
-                        next_wakeup += self.ts
-                        pause.until(next_wakeup)
-                        continue
-                    data = [
-                        f"mem,place={self.place} {k}={v} {timestamp}"
-                        for k, v in response
-                    ]
-                    write_api.write(self.bucket, self.org, data)
+                    for loc_name, q_location_str in self.weatherapi_locations.items():
+                        timestamp, respone_weatherapi = self.get_weatherapi(q_location_str)
+                        if respone_weatherapi is not None:
+                            [
+                                write_api.write(self.bucket, self.org,f"weatherapi,location={loc_name} {k}={v} {timestamp}")
+                                for k, v in respone_weatherapi.items() if k in self.weatherapi_fields_to_track
+                            ]
+
+                    # timestamp, response_openweathermap = self.get_openweathermap()
+                    # if response_openweathermap is not None:
+                    #     [
+                    #         write_api.write(self.bucket, self.org,f"openweathermap {k}={v} {timestamp}")
+                    #         for k, v in response_openweathermap.items() if k in self.fields_to_track
+                    #     ]
                 except Exception as exc:
                     print(exc)
                     print('Will try again in the next iteration...')
                 next_wakeup += self.ts
                 pause.until(next_wakeup)
-                # self.kill = True
 
-        
 
 if __name__ == "__main__":
     import argparse
