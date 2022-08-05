@@ -38,10 +38,17 @@ influx user create -n johndoe -o example-org -t <token>
 ### Updating Tokens
 You cannot change tokens after their creation. You can delete/disable them and/or add new ones. Do that through the GUI under the Load Data tab.
 
+### DB Backup and Restore
+Admin's token is neccessary for backup operation!
+```
+influx backup /bitnami/influxdb/backupfile -t <token>
+influx restore /bitnami/influxdb/backupfile -t <token>
+```
+
 # Influx Frontend
 Access the GUI on `http://localhost:8086/` when influx container is running.
 ```
-admin: bitnami123
+admin: <password_eg_bitnami123>
 ```
 
 ## Influx Address
