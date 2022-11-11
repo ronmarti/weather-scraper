@@ -3,7 +3,7 @@ import requests
 from datetime import date, datetime, timedelta, timezone
 import pause
 
-from influxdb_client import InfluxDBClient, Point, WritePrecision
+from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
 from rx import catch
 
@@ -17,7 +17,8 @@ class WeatherWorker(object):
 
         # You can generate an API token from the "API Tokens Tab" in the UI
         self.influx_address = config['influx']['address']
-        self.token = os.environ['INFLUXDB_ADMIN_USER_TOKEN']
+        # self.token = os.environ['INFLUXDB_ADMIN_USER_TOKEN']
+        self.token = os.environ['INFLUXDB_USER_TOKEN']
         self.org = config['influx']['org']
         self.bucket = config['influx']['bucket']
 

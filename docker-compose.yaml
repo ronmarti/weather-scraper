@@ -5,7 +5,7 @@ services:
     build: ""
     networks:
       - home-network
-    image: weatherscraper
+    image: weatherscraper 
     env_file:
       - secrets/.env
     restart: always
