@@ -1,0 +1,28 @@
+version: '3.4'
+services:
+  weather-scraper:
+    container_name: weather-scraper
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
+    command:
+      - -c
+      - configs/config.json
+    image: weatherscraper:0.1.0
+    networks:
+      - weatherscraper-network
+    volumes:
+      - ./configs:/app/configs:shared
+    env_file:
+      - secrets/.env
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 10m
+        max-file: "2"
+
+networks:
+  weatherscraper-network:
+    driver: bridge

@@ -5,7 +5,9 @@ import pause
 
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
-from rx import catch
+from logger import init_logger
+
+logger = init_logger(__name__)
 
 
 class WeatherWorker(object):
@@ -17,6 +19,7 @@ class WeatherWorker(object):
 
         # You can generate an API token from the "API Tokens Tab" in the UI
         self.influx_address = config['influx']['address']
+        logger.info(f'Connecting to influx on endpoint: {self.influx_address}')
         # self.token = os.environ['INFLUXDB_ADMIN_USER_TOKEN']
         self.token = os.environ['INFLUXDB_USER_TOKEN']
         self.org = config['influx']['org']
@@ -65,18 +68,20 @@ class WeatherWorker(object):
         """        
         req_params = {'key': self.weatherapi_token,
                       'q': q}
+        logger.debug(f'Requesting WeatherAPI')
         response = requests.get(self.weatherapi_url, params=req_params).json()
         if 'current' in response:
             timestamp = round(1e9*response['current']['last_updated_epoch'])
             return timestamp, response['current']
         else:
-            print(f'Request failed:\n{response}')
+            logger.error(f'Request on WeatherAPI failed:\n{response}')
             return None, None
 
     def get_ibc(self, date: datetime = None):
         if date is None:
             date = datetime.today()
         self.ibc_req_params['date'] = datetime.strftime(date, '%y-%m-%d')
+        logger.debug(f'Requesting IBC')
         response = requests.get(self.ibc_url, params=self.ibc_req_params).json()
         unwrapped = {
             round(1e6*pair[0]): pair[1]
@@ -88,35 +93,37 @@ class WeatherWorker(object):
     def run_forever(self):
         next_wakeup = datetime.now()
         with InfluxDBClient(url=self.influx_address, token=self.token, org=self.org) as client:
-            write_api = client.write_api(write_options=SYNCHRONOUS)
-            while(not self.kill):
-                try:
-                    now = round(1e9*datetime.now(timezone.utc).timestamp())
-                    response_ibc = self.get_ibc()
-                    [
-                        write_api.write(self.bucket, self.org,f"ibc power={v} {k}")
-                        for k, v in response_ibc.items()
-                    ]
+            logger.info(client.health())
+            with client.write_api(write_options=SYNCHRONOUS) as write_api:
+                while(not self.kill):
+                    try:
+                        now = round(1e9*datetime.now(timezone.utc).timestamp())
+                        response_ibc = self.get_ibc()
+                        [
+                            write_api.write(self.bucket, self.org,f"ibc power={v} {k}")
+                            for k, v in response_ibc.items()
+                        ]
 
-                    for loc_name, q_location_str in self.weatherapi_locations.items():
-                        timestamp, respone_weatherapi = self.get_weatherapi(q_location_str)
-                        if respone_weatherapi is not None:
-                            [
-                                write_api.write(self.bucket, self.org,f"weatherapi,location={loc_name} {k}={v} {timestamp}")
-                                for k, v in respone_weatherapi.items() if k in self.weatherapi_fields_to_track
-                            ]
+                        for loc_name, q_location_str in self.weatherapi_locations.items():
+                            timestamp, respone_weatherapi = self.get_weatherapi(q_location_str)
+                            if respone_weatherapi is not None:
+                                [
+                                    write_api.write(self.bucket, self.org,f"weatherapi,location={loc_name} {k}={v} {timestamp}")
+                                    for k, v in respone_weatherapi.items() if k in self.weatherapi_fields_to_track
+                                ]
 
-                    # timestamp, response_openweathermap = self.get_openweathermap()
-                    # if response_openweathermap is not None:
-                    #     [
-                    #         write_api.write(self.bucket, self.org,f"openweathermap {k}={v} {timestamp}")
-                    #         for k, v in response_openweathermap.items() if k in self.fields_to_track
-                    #     ]
-                except Exception as exc:
-                    print(exc)
-                    print('Will try again in the next iteration...')
-                next_wakeup += self.ts
-                pause.until(next_wakeup)
+                        # timestamp, response_openweathermap = self.get_openweathermap()
+                        # if response_openweathermap is not None:
+                        #     [
+                        #         write_api.write(self.bucket, self.org,f"openweathermap {k}={v} {timestamp}")
+                        #         for k, v in response_openweathermap.items() if k in self.fields_to_track
+                        #     ]
+                        logger.info(f'All data written.')
+                    except Exception as exc:
+                        logger.exception(exc)
+                        logger.info('Will try again in the next iteration...')
+                    next_wakeup += self.ts
+                    pause.until(next_wakeup)
 
 
 if __name__ == "__main__":
@@ -138,6 +145,6 @@ if __name__ == "__main__":
     else:
         raise argparse.ArgumentError(path_parser, f"Config file doesn't exist! Invalid path: {args.config} to config.ini.txt file, please check it!")
 
-    print('Done')
+    logger.info('App finished')
 
 

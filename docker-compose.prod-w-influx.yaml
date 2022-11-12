@@ -1,0 +1,48 @@
+version: '3.4'
+services:
+  weather-scraper:
+    container_name: weather-scraper
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
+    networks:
+      - weatherscraper-network
+    image: weatherscraper
+    volumes:
+      - ./configs:/app/configs:shared
+    env_file:
+      - secrets/.env
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 10m
+        max-file: "2"
+
+  influxdb:
+    container_name: influxdb-weatherscraper
+    image: influxdb:2.4-alpine
+    ports:
+      - 8086:8086
+      - 8088:8088
+    env_file:
+      - secrets/.env
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    restart: always
+    networks:
+      - weatherscraper-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 10m
+        max-file: "2"
+
+volumes:
+  influxdb_data:
+    driver: local
+
+networks:
+  weatherscraper-network:
+    driver: bridge

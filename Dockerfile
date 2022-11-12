@@ -1,5 +1,5 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.10-slim-buster
+FROM python:3.10-slim-buster as base
 
 LABEL version="2022.2.0" maintainer="martin.ron@factorio.cz"
 
@@ -14,21 +14,20 @@ ENV PYTHONFAULTHANDLER=1 \
   PIP_NO_CACHE_DIR=off \
   PIP_DISABLE_PIP_VERSION_CHECK=on \
   PIP_DEFAULT_TIMEOUT=100 \
-  POETRY_VERSION=1.1.0
+  POETRY_VERSION=1.2.0
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends build-essential gcc libsndfile1
+RUN apt-get clean
 
 RUN pip install "poetry==$POETRY_VERSION"
 
-# # Install pip requirements
-# COPY requirements.txt .
-# RUN python -m pip install -r requirements.txt
-
 WORKDIR /app
-COPY poetry.lock pyproject.toml /app/
+COPY poetry.loc[k] .
+COPY pyproject.toml .
 
+FROM base as prod
 RUN poetry config virtualenvs.create false \
-  && poetry install --no-dev --no-interaction --no-ansi
+  && poetry install --without dev --no-interaction --no-ansi --no-cache
 
 COPY . /app/
 
@@ -37,8 +36,8 @@ COPY . /app/
 # RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
 # USER appuser
 
-ENTRYPOINT [ "python3" ]
+ENTRYPOINT [ "python3", "weather_scraper/main.py" ]
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
 # CMD ["python3", "mpc_oven/main.py", "--config", "configs/config.json"]
-CMD ["weather_scraper/main.py", "--config", "configs/config.json"]
+CMD [ "--config", "configs/config.json"]
